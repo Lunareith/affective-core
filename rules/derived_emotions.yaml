@@ -1,0 +1,204 @@
+# rules/derived_emotions.yaml — 20 个基础派生情绪规则（权重矩阵模式）
+# 计算方式：intensity = clamp(Σ (dimension_value * weight), 0.0, 1.0)
+# 负值维度先取绝对值参与计算，但 valence 为负时可能触发特定规则
+
+rules:
+  - label: tender
+    description: "温柔 — 亲密与低激活的正价组合"
+    weights:
+      intimacy: 0.40
+      valence: 0.30
+      arousal: -0.15
+      trust: 0.15
+    threshold: 0.35
+
+  - label: grateful
+    description: "感激 — 信任与正价带来的低支配感恩"
+    weights:
+      trust: 0.35
+      valence: 0.30
+      dominance: -0.15
+      respect: 0.20
+    threshold: 0.35
+
+  - label: excited
+    description: "兴奋 — 高激活与积极预期的组合"
+    weights:
+      arousal: 0.40
+      valence: 0.25
+      anticipation: 0.25
+      hope: 0.10
+    threshold: 0.40
+
+  - label: anxious
+    description: "焦虑 — 高激活与不确定性的负面组合"
+    weights:
+      arousal: 0.35
+      certainty: -0.30
+      valence: -0.20
+      impatience: 0.15
+    threshold: 0.35
+
+  - label: frustrated
+    description: "沮丧 — 失望与低支配的负面激活"
+    weights:
+      disappointment: 0.35
+      valence: -0.25
+      dominance: -0.20
+      arousal: 0.10
+      impatience: 0.10
+    threshold: 0.35
+
+  - label: hopeful
+    description: "希望 — 积极与期待的向上组合"
+    weights:
+      hope: 0.40
+      valence: 0.30
+      anticipation: 0.20
+      certainty: 0.10
+    threshold: 0.35
+
+  - label: bittersweet
+    description: "苦乐参半 — 怀旧与正价的低激活混合"
+    weights:
+      nostalgia: 0.35
+      valence: 0.20
+      arousal: -0.15
+      relief: 0.15
+      disappointment: -0.15
+    threshold: 0.30
+
+  - label: proud
+    description: "自豪 — 支配与尊重的正价组合"
+    weights:
+      dominance: 0.35
+      respect: 0.25
+      valence: 0.25
+      certainty: 0.15
+    threshold: 0.35
+
+  - label: guilty
+    description: "内疚 — 信任降低与低支配的负面"
+    weights:
+      trust: -0.30
+      valence: -0.25
+      dominance: -0.25
+      intimacy: -0.10
+      respect: 0.10
+    threshold: 0.30
+
+  - label: lonely
+    description: "孤独 — 亲密缺失与中性激活的负面"
+    weights:
+      intimacy: -0.40
+      valence: -0.25
+      trust: -0.20
+      arousal: 0.05
+    threshold: 0.30
+
+  - label: inspired
+    description: "受启发 — 好奇与高激活的正价"
+    weights:
+      curiosity: 0.35
+      valence: 0.25
+      arousal: 0.20
+      hope: 0.15
+      anticipation: 0.05
+    threshold: 0.35
+
+  - label: content
+    description: "满足 — 正价与低激活的宁静"
+    weights:
+      valence: 0.30
+      arousal: -0.25
+      relief: 0.20
+      certainty: 0.15
+      curiosity: -0.10
+    threshold: 0.30
+
+  - label: surprised
+    description: "惊讶 — 高激活与确定性骤降"
+    weights:
+      arousal: 0.35
+      certainty: -0.30
+      anticipation: -0.15
+      valence: 0.10
+      confusion: 0.10
+    threshold: 0.35
+
+  - label: relieved
+    description: "释然 — 释然与正价的低激活恢复"
+    weights:
+      relief: 0.40
+      valence: 0.25
+      arousal: -0.20
+      disappointment: -0.15
+    threshold: 0.35
+
+  - label: embarrassed
+    description: "尴尬 — 支配降低与不确定的轻微负面"
+    weights:
+      dominance: -0.30
+      valence: -0.20
+      certainty: -0.20
+      respect: -0.15
+      intimacy: 0.15
+    threshold: 0.30
+
+  - label: nostalgic
+    description: "怀旧 — 怀旧维度的主导"
+    weights:
+      nostalgia: 0.50
+      valence: 0.20
+      arousal: -0.15
+      intimacy: 0.10
+      trust: 0.05
+    threshold: 0.35
+
+  - label: curious
+    description: "好奇 — 好奇维度的直接映射"
+    weights:
+      curiosity: 0.50
+      valence: 0.20
+      anticipation: 0.20
+      arousal: 0.10
+    threshold: 0.35
+
+  - label: serene
+    description: "宁静 — 正价低激活高确定的稳定状态"
+    weights:
+      valence: 0.25
+      arousal: -0.25
+      certainty: 0.25
+      relief: 0.15
+      curiosity: -0.10
+    threshold: 0.30
+
+  - label: overwhelmed
+    description: "不知所措 — 高激活困惑与支配丧失"
+    weights:
+      arousal: 0.30
+      confusion: 0.30
+      dominance: -0.25
+      certainty: -0.15
+    threshold: 0.35
+
+  - label: affectionate
+    description: "深情 — 亲密与信任的正价浓烈表达"
+    weights:
+      intimacy: 0.35
+      trust: 0.25
+      valence: 0.25
+      arousal: 0.05
+      respect: 0.10
+    threshold: 0.35
+
+# 元配置
+meta:
+  version: "1.0.0"
+  author: "Kimi Claw"
+  clamp_range: [0.0, 1.0]
+  # 当 valence < -0.2 时，某些正价派生情绪可能被抑制（由 derived.py 实现）
+  valence_inhibit_threshold: -0.2
+  # 抑制强度：当 valence 低于阈值时，正价派生情绪 intensity *= (1 + valence)
+  inhibit_formula: "intensity * max(0, 1 + valence) if valence < threshold else intensity"
