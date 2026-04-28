@@ -1,21 +1,23 @@
-# Affective Core — MVP v1.0.1 交付说明
+# Affective Core — MVP v1.0.4 交付说明
 
-> 版本: 1.0.1（修复版）
+> 版本: 1.0.4（最终版）
 > 作者: Luciana & Kimi Claw & Miko
 > 日期: 2026-04-28
 
-## 更新说明（v1.0.1）
+## 更新说明（v1.0.4）
 
-基于代码审查报告修复的问题：
+基于代码审查报告和测试反馈修复的问题：
+- ✅ 10 个 pytest 失败全部修复（emotion_state 5个 + gate 3个 + dynamics 1个 + safety 1个）
 - ✅ config.json 配置结构与代码读取对齐
 - ✅ safety 安全函数在 emotion_engine 中正确调用
 - ✅ memory_coupler.py 补充（情绪回灌计算）
 - ✅ 四级降级配置不同模型
 - ✅ derived 计算逻辑统一使用 DerivedEmotions 类
 - ✅ gate 结果从 pre_reply 传递到 post_reply，避免重复检测
-- ✅ __init__.py 补充
+- ✅ __init__.py 补充（根目录 + src/）
 - ✅ jsonschema 导入添加 fallback（未安装时基础类型检查）
 - ✅ 冷却自适应（对话密度检测）
+- ✅ 全面测试文件（conftest.py 等）已包含在测试目录
 
 ## 一、交付内容
 

@@ -1,6 +1,6 @@
-"""Affective Core - Agent 情感框架 MVP v1.0"""
+"""Affective Core - Agent 情感框架 MVP v1.0.4"""
 
-__version__ = "1.0.0"
+__version__ = "1.0.4"
 __author__ = "Luciana & Kimi Claw & Miko"
 
 # 支持作为包导入和直接运行两种方式
