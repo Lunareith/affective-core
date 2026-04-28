@@ -1,0 +1,91 @@
+{
+  "enabled": true,
+  "llm": {
+    "api_base": "https://api.example.com/v1",
+    "api_key": "YOUR_API_KEY_HERE",
+    "appraiser_model": "kimi-k2p5",
+    "fallback_model": "qwen-turbo",
+    "emergency_model": "kimi-for-coding",
+    "timeout_seconds": 10,
+    "fallback_timeout_seconds": 5,
+    "cache_ttl_seconds": 120
+  },
+  "gate": {
+    "mode": "rule",
+    "rule_threshold": 0.6,
+    "embedding_api_url": "",
+    "embedding_api_key": "",
+    "embedding_threshold": 0.7
+  },
+  "dimensions": {
+    "all": [
+      "valence", "arousal", "dominance",
+      "trust", "intimacy", "respect", "forgiveness",
+      "curiosity", "confusion", "certainty", "anticipation",
+      "nostalgia", "impatience", "relief", "disappointment", "hope"
+    ],
+    "baseline": {
+      "valence": 0.1,
+      "arousal": 0.3,
+      "dominance": 0.2,
+      "trust": 0.0,
+      "intimacy": 0.0,
+      "respect": 0.0,
+      "forgiveness": 0.0,
+      "curiosity": 0.5,
+      "confusion": 0.0,
+      "certainty": 0.3,
+      "anticipation": 0.2,
+      "nostalgia": 0.0,
+      "impatience": 0.0,
+      "relief": 0.0,
+      "disappointment": 0.0,
+      "hope": 0.1
+    },
+    "clamp": {
+      "valence": [-0.8, 1.0],
+      "forgiveness": [-0.7, 0.7],
+      "disappointment": [-0.8, 0.0],
+      "hope": [0.1, 1.0]
+    }
+  },
+  "dynamics": {
+    "decay_rate_per_run": 0.1,
+    "inertia_coeff": 0.3,
+    "coupling_enabled": true,
+    "noise_std": 0.02,
+    "stale_threshold_minutes": 30
+  },
+  "expression": {
+    "surface_cooldown_seconds": 60,
+    "deep_cooldown_seconds": 180,
+    "density_fast_threshold_ms": 30000,
+    "density_slow_threshold_ms": 300000,
+    "intensity_threshold": 0.6,
+    "novelty_check_enabled": true
+  },
+  "safety": {
+    "max_negative_valence": -0.8,
+    "pathology_filter_enabled": true,
+    "anomaly_window_runs": 3,
+    "anomaly_valence_threshold": -0.5,
+    "anomaly_arousal_threshold": 0.7,
+    "pathology_patterns": [
+      "(?i)你.*抑郁",
+      "(?i)你.*焦虑",
+      "(?i)你.*ptsd",
+      "(?i)你.*心理.*病",
+      "(?i)你.*需要.*医生",
+      "(?i)你.*障碍",
+      "(?i)你.*综合征"
+    ]
+  },
+  "memory": {
+    "journal_path": "emotion-journal.jsonl",
+    "state_path": "emotion-state.json",
+    "audit_dir": "emotion-audit",
+    "topic_fp_hashlen": 8,
+    "recharge_time_decay_hours": 48,
+    "recharge_lookback_days": 7
+  }
+}
