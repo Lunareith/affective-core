@@ -94,5 +94,19 @@
     "topic_fp_hashlen": 8,
     "recharge_time_decay_hours": 48,
     "recharge_lookback_days": 7
+  },
+  "boundary": {
+    "lock_consecutive_runs": 5,
+    "lock_epsilon": 0.001,
+    "lock_perturbation_std": 0.05,
+    "oscillation_window_runs": 4,
+    "oscillation_amplitude": 0.5,
+    "freeze_threshold": 0.05,
+    "freeze_curiosity_offset": 0.3
+  },
+  "visualization": {
+    "html_export_path": "emotion-dashboard.html",
+    "terminal_width": 60,
+    "terminal_height": 28
   }
 }

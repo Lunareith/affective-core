@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .derived import DerivedEmotions
-from .safety import SafetyGuard
+from .safety import SafetyGuard, BoundaryGuard
 from .gate import KeywordGate
 from .appraiser import Appraiser
 from .audit import AuditChain
@@ -76,6 +76,7 @@ class AffectiveCore:
         self.audit = AuditChain(str(self.config_path))
         self.derived = DerivedEmotions(str(Path(self.config_path).parent / "rules" / "derived_emotions.yaml"))
         self.safety = SafetyGuard(str(self.config_path))
+        self.boundary = BoundaryGuard(str(self.config_path))
         self.prompt_injector = PromptInjector(str(self.config_path))
         self.persona = PersonaManager(
             templates_path=str(Path(self.config_path).parent / "persona_templates.json"),
@@ -132,6 +133,8 @@ class AffectiveCore:
         self.last_expressions = []
         self.last_gate_result = None
         self._conversation_timestamps = []
+        self.boundary.reset_coupling_factors()
+        self.boundary.reset_window()
         self._save()
 
     # ------------------------------------------------------------------
@@ -210,6 +213,12 @@ class AffectiveCore:
         new_vec = self._dynamics_update(delta)
         self.vec = new_vec
         self.audit.log("dynamics", {"delta": delta, "new_vec": new_vec})
+
+        # 2.5 边界检测与自修复（v1.1.0）
+        repaired_vec, boundary_diag = self.boundary.detect_and_repair(dict(self.vec))
+        if boundary_diag["repairs_applied"]:
+            self.vec = repaired_vec
+            self.audit.log("boundary", boundary_diag)
 
         # 3. 安全检查（S2 修复）
         # 3.1 异常检测
