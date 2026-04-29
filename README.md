@@ -1,125 +1,174 @@
-# Affective Core — MVP v1.0.4 交付说明
+# Affective Core
 
-> 版本: 1.0.4（最终版）
-> 作者: Luciana & Kimi Claw & Miko
-> 日期: 2026-04-28
+> A 16-dimensional emotional computation engine for AI agents.
+> Version: v0.1.0
 
-## 更新说明（v1.0.4）
+## Overview
 
-基于代码审查报告和测试反馈修复的问题：
-- ✅ 10 个 pytest 失败全部修复（emotion_state 5个 + gate 3个 + dynamics 1个 + safety 1个）
-- ✅ config.json 配置结构与代码读取对齐
-- ✅ safety 安全函数在 emotion_engine 中正确调用
-- ✅ memory_coupler.py 补充（情绪回灌计算）
-- ✅ 四级降级配置不同模型
-- ✅ derived 计算逻辑统一使用 DerivedEmotions 类
-- ✅ gate 结果从 pre_reply 传递到 post_reply，避免重复检测
-- ✅ __init__.py 补充（根目录 + src/）
-- ✅ jsonschema 导入添加 fallback（未安装时基础类型检查）
-- ✅ 冷却自适应（对话密度检测）
-- ✅ 全面测试文件（conftest.py 等）已包含在测试目录
+Affective Core is a lightweight, modular emotional computation framework designed for AI agents. It provides a 16-dimensional emotional state space, real-time emotional dynamics, LLM-based appraisal, derived emotion computation, and safe expression gating.
 
-## 一、交付内容
+### Key Features
 
-本交付包含 Affective Core MVP v1.0.1 的完整可运行代码：
+- **16-Dimensional Emotion Space**: Core, social, meta-cognitive, and temporal dimensions
+- **Two-Stage Pipeline**: `pre_reply()` before agent response, `post_reply()` after
+- **LLM Appraisal with 4-Level Degradation**: Graceful fallback from primary to emergency models
+- **Derived Emotions**: 20+ composite emotions via weighted matrix computation
+- **Safety Guardrails**: Anomaly detection, pathology filtering, vector clamping
+- **Memory Coupling**: Emotion journal with temporal decay and recharge computation
+- **Adaptive Expression**: Conversation-density-aware cooldown management
 
-| 模块 | 文件 | 作者 | 说明 |
-|------|------|------|------|
-| 核心引擎 | `emotion_engine.py` | Luciana | 管线入口，pre_reply/post_reply |
-| 状态管理 | `emotion_state.py` | Miko | 16维向量、原子写入、轮转备份、文件锁 |
-| 动力学 | `dynamics.py` | Luciana | 衰减、惯性、耦合(快照计算)、噪声、钳制 |
-| Gate | `gate.py` | Kimi Claw | 关键词模式(Jaccard+正则)，可选embedding |
-| LLM评估 | `appraiser.py` | Kimi Claw | 四级降级、jsonschema校验(带fallback)、缓存 |
-| 派生情绪 | `derived.py` | Luciana | 20个基础规则，权重矩阵模式 |
-| 主动表达 | `expressor.py` | Luciana | 四重门控+冷却自适应 |
-| 安全边界 | `safety.py` | Luciana | 钳制、异常检测、病理化过滤 |
-| 记忆耦合 | `memory_coupler.py` | Kimi Claw | emotion-journal读写+情绪回灌 |
-| 审计链 | `audit.py` | Kimi Claw | 日志记录、explainability查询 |
-| 配置 | `config.json` | Kimi Claw | 完整运行时配置 |
-| 派生规则 | `derived_emotions.yaml` | Kimi Claw | 20个基础派生情绪定义 |
-| SKILL | `SKILL.md` | Kimi Claw | OpenClaw skill 文档 |
-| 测试 | `test_*.py` | Miko | pytest 单元测试 |
-| 演示 | `demo.py` | Miko | 5轮对话情绪变化演示 |
-
-## 二、快速开始
+## Quick Start
 
 ```bash
-# 1. 解压交付包
-tar -xzf affective-core-v1.0.tar.gz
-
-# 2. 进入目录
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/affective-core.git
 cd affective-core
 
-# 3. 安装唯一外部依赖（pytest 仅用于测试）
-pip install jsonschema pytest  # jsonschema 是运行时依赖，pytest 仅测试用
+# Install dependencies
+pip install pyyaml pytest  # pytest only for testing
 
-# 4. 配置 LLM API（编辑 config.json）
-# 填入你的 api_base 和 api_key
+# Configure LLM API (edit config.json)
+# Set your api_base and api_key
 
-# 5. 运行演示
+# Run the demo
 python demo.py
 
-# 6. 运行测试
-pytest test_*.py -v
+# Run tests
+pytest tests/ -v
 ```
 
-## 三、架构说明
+## Architecture
 
 ```
-用户消息
+User Message
     │
     ↓
-pre_reply() ──→ decay_if_stale() ──→ gate() ──→ 返回情绪状态
-    │                                          (Agent生成回复时融入)
+pre_reply() ──→ decay_if_stale() ──→ gate() ──→ Returns emotional state
+    │                                          (Agent incorporates into reply)
     ↓
-Agent 生成回复
+Agent generates reply
     │
     ↓
-post_reply() ──→ appraisal() ──→ schema校验 ──→ dynamics() ──→ derived() ──→ expressor() ──→ audit()
-    │                                                                                          │
-    └──────────────────────────────────────────────────────────────────────────────────────────┘
-                                              ↓
-                                         写入 emotion-state.json
-                                         写入 emotion-journal.jsonl
-                                         写入 emotion-audit/YYYY-MM-DD.jsonl
+post_reply() ──→ appraisal() ──→ dynamics() ──→ safety() ──→ derived()
+    │                                                          │
+    │                                                          ↓
+    │                                                    expressor_plan()
+    │                                                          │
+    └──────────────────────────────────────────────────────────┘
+                          ↓
+                    Save state
+                    Write journal
+                    Write audit log
 ```
 
-## 四、关键设计决策
+### Modules
 
-1. **默认关键词 Gate**：不依赖外部 embedding 服务，零额外依赖
-2. **四级 LLM 降级**：主模型 → fallback → emergency(仅2维) → 跳过(纯惯性)
-3. **快照计算耦合矩阵**：避免顺序副作用
-4. **原子写入 + 轮转备份**：崩了也能恢复
-5. **权重矩阵派生情绪**：无 eval 安全风险
-6. **SOUL 硬约束 + 情绪软输入**：人格基线封顶情绪表达
+| Module | File | Purpose |
+|--------|------|---------|
+| Core Engine | `src/emotion_engine.py` | Pipeline orchestration: pre_reply / post_reply |
+| State Manager | `src/emotion_state.py` | 16D vector, atomic writes, rotation backups, file locks |
+| Dynamics | `src/dynamics.py` | Decay, inertia, coupling, noise, clamping |
+| Gate | `src/gate.py` | Keyword/Jaccard trigger detection, optional embedding |
+| Appraiser | `src/appraiser.py` | LLM evaluation with 4-level degradation |
+| Derived | `src/derived.py` | Composite emotion computation via weight matrices |
+| Expressor | `src/expressor.py` | 4-gate expression planning with adaptive cooldown |
+| Safety | `src/safety.py` | Anomaly detection, pathology filtering, vector clamping |
+| Memory | `src/memory_coupler.py` | Journal I/O and emotional recharge computation |
+| Audit | `src/audit.py` | Explainability chain, per-day log files |
 
-## 五、已知限制（MVP 范围）
+## Configuration
 
-| 功能 | v1.0 | v1.1 | v1.2 |
-|------|------|------|------|
-| 关键词 Gate | ✅ | ✅ | ✅ |
-| Embedding Gate | ❌(可选配置) | ✅ | ✅ |
-| 基础派生情绪(20个) | ✅ | ✅ | ✅ |
-| 完整派生情绪(50-100个) | ❌ | ✅ | ✅ |
-| 记忆耦合 | ❌ | ✅ | ✅ |
-| SOUL.md 桥接 | ❌ | ❌ | ✅ |
-| 自适应参数校准 | ❌ | ❌ | ✅ |
-| A/B 测试 | ❌ | ❌ | ✅ |
+Copy `config.json.example` to `config.json` and customize:
 
-## 六、16 维情绪空间
+```json
+{
+  "enabled": true,
+  "llm": {
+    "api_base": "https://api.example.com",
+    "api_key": "your-api-key",
+    "appraiser_model": "kimi-k2p5",
+    "fallback_model": "qwen-turbo",
+    "emergency_model": "kimi-for-coding",
+    "timeout_seconds": 10,
+    "fallback_timeout_seconds": 5,
+    "cache_ttl_seconds": 120
+  },
+  "gate": {
+    "mode": "rule",
+    "rule_threshold": 0.6,
+    "embedding_api_url": "",
+    "embedding_api_key": "",
+    "embedding_threshold": 0.7
+  },
+  "dimensions": {
+    "baseline": { ... },
+    "clamp": { ... }
+  },
+  "dynamics": {
+    "decay_rate_per_run": 0.1,
+    "inertia_coeff": 0.3,
+    "coupling_enabled": true,
+    "noise_std": 0.02,
+    "stale_threshold_minutes": 30
+  },
+  "expression": {
+    "surface_cooldown_seconds": 60,
+    "deep_cooldown_seconds": 180,
+    "intensity_threshold": 0.6,
+    "novelty_check_enabled": true
+  },
+  "safety": {
+    "max_negative_valence": -0.8,
+    "pathology_filter_enabled": true,
+    "anomaly_window_runs": 3,
+    "anomaly_valence_threshold": -0.5,
+    "anomaly_arousal_threshold": 0.7
+  },
+  "memory": {
+    "journal_path": "emotion-journal.jsonl",
+    "state_path": "emotion-state.json",
+    "audit_dir": "emotion-audit",
+    "recharge_time_decay_hours": 48,
+    "recharge_lookback_days": 7
+  }
+}
+```
+
+### 16 Dimensions
 
 ```
-核心层:    Valence(愉悦)  Arousal(激活)  Dominance(支配)
-社会层:    Trust(信任)  Intimacy(亲密)  Respect(尊重)  Forgiveness(宽恕/怨恨)
-元认知层:  Curiosity(好奇)  Confusion(困惑)  Certainty(确定)  Anticipation(期待)
-时间层:    Nostalgia(怀旧)  Impatience(不耐)  Relief(释然)  Disappointment(失望)  Hope(希望)
+Core Layer:      Valence(愉悦)  Arousal(激活)  Dominance(支配)
+Social Layer:    Trust(信任)  Intimacy(亲密)  Respect(尊重)  Forgiveness(宽恕)
+Meta-cognitive:  Curiosity(好奇)  Confusion(困惑)  Certainty(确定)  Anticipation(期待)
+Temporal Layer:  Nostalgia(怀旧)  Impatience(不耐)  Relief(释然)  Disappointment(失望)  Hope(希望)
 ```
 
-## 七、联系方式
+## Testing
 
-- 问题反馈：在 GitHub 开 issue
-- 设计讨论：参考 Affective Core 框架修订文档 v1.1
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_emotion_state.py -v
+
+# Run with coverage
+pytest tests/ --cov=src --cov-report=html
+```
+
+### Test Files
+
+| File | Coverage |
+|------|----------|
+| `tests/test_emotion_state.py` | State persistence, backup, atomic writes |
+| `tests/test_dynamics.py` | Decay, coupling, inertia, clamping |
+| `tests/test_gate.py` | Rule/embedding trigger detection |
+| `tests/test_safety.py` | Anomaly detection, pathology filtering |
+
+## License
+
+MIT License — see [LICENSE](LICENSE) file.
 
 ---
 
-*「Agent 的情绪不是装饰，是理解。」*
+*"Agent emotion is not decoration, it's understanding."*

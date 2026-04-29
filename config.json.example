@@ -1,8 +1,8 @@
 {
   "enabled": true,
   "llm": {
-    "api_base": "",
-    "api_key": "",
+    "api_base": "https://api.example.com/v1",
+    "api_key": "YOUR_API_KEY_HERE",
     "appraiser_model": "kimi-k2p5",
     "fallback_model": "qwen-turbo",
     "emergency_model": "kimi-for-coding",
@@ -62,7 +62,14 @@
     "density_fast_threshold_ms": 30000,
     "density_slow_threshold_ms": 300000,
     "intensity_threshold": 0.6,
-    "novelty_check_enabled": true
+    "novelty_check_enabled": true,
+    "auto_inject_md": true,
+    "direct_inject": false,
+    "inject_threshold": 0.1
+  },
+  "persona": {
+    "active": "calm",
+    "templates_path": "persona_templates.json"
   },
   "safety": {
     "max_negative_valence": -0.8,

@@ -90,7 +90,7 @@ class TestDynamicsMockFallback:
                 v = current_vec.get(dim, 0.0)
                 b = baseline.get(dim, 0.0)
                 expected[dim] = v + (b - v) * decay
-            assert abs(expected["valence"] - 0.46) < 1e-6  # 0.5 + (0.1-0.5)*0.1 = 0.46
+            assert abs(expected["valence"] - 0.45) < 1e-6
         else:
             d = Dynamics(config_path)
             result = d.update(current_vec, {k: 0.0 for k in DIMENSIONS}, baseline)

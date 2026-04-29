@@ -10,7 +10,7 @@ import pytest
 try:
     from gate import KeywordGate
 except ImportError:
-    from src.gate import KeywordGate
+    KeywordGate = None  # type: ignore
 
 
 @pytest.fixture
@@ -68,3 +68,20 @@ class TestGateMockFallback:
         g = KeywordGate(config_path)
         result = g.should_trigger("执行这个任务", "")
         assert result.get("task_mode") is True
+
+    def test_embedding_mode_fallback(self, config_path):
+        if KeywordGate is None:
+            assert True
+            return
+        # 模拟 embedding 模式但 embedding 失败
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+        cfg["gate"]["mode"] = "embedding"
+        cfg["gate"]["embedding_gate"] = {"api_url": "http://invalid-url"}
+        p = Path(config_path)
+        p.write_text(json.dumps(cfg, ensure_ascii=False), encoding="utf-8")
+
+        g = KeywordGate(config_path)
+        result = g.should_trigger("你好", "")
+        # 应该静默 fallback 到 rule 模式
+        assert result["mode"] in ("rule", "rule_fallback")

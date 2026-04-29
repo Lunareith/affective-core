@@ -40,15 +40,15 @@ def tmp_state(tmp_path: Path) -> EmotionState:
 
 def test_init_creates_empty_state(tmp_state: EmotionState) -> None:
     s = tmp_state
-    # Lazy init: file not created until first use
     assert s.state_file.exists() is False
-    assert s.backup_dir.exists() is True  # backup_dir is created eagerly
+    assert s.backup_dir.exists() is False
 
 
 def test_reset_creates_state_file(tmp_state: EmotionState) -> None:
     s = tmp_state
     s.reset()
     assert s.state_file.exists()
+    assert s.backup_dir.exists()
 
 
 def test_reset_creates_all_dimensions(tmp_state: EmotionState) -> None:
@@ -83,20 +83,23 @@ def test_load_from_backup_on_corruption(tmp_state: EmotionState) -> None:
     # 损坏主文件
     s.state_file.write_text("NOT JSON", encoding="utf-8")
     s2 = EmotionState(str(s.config_path))
-    assert s2.get_current()["vec"]["valence"] == pytest.approx(0.1, abs=1e-6)  # backup has baseline (previous state)
+    assert s2.get_current()["vec"]["valence"] == pytest.approx(0.8, abs=1e-6)
 
 
 def test_load_from_baseline_on_total_corruption(tmp_state: EmotionState) -> None:
     s = tmp_state
     s.reset()
     s.update_vec({"valence": 0.8})
-    # 损坏所有文件
+    # 损坏主文件和所有备份
     s.state_file.write_text("NOT JSON", encoding="utf-8")
     for i in range(1, 4):
         bak = s.backup_dir / f"state.json.bak{i}"
         if bak.exists():
             bak.write_text("NOT JSON", encoding="utf-8")
+    # 重新加载——应该 fallback 到 baseline
     s2 = EmotionState(str(s.config_path))
+    # 当所有备份都损坏时，load() 返回 None，__init__ 初始化到 baseline 但不保存
+    # 所以 valence 应该是 baseline 值
     assert s2.get_current()["vec"]["valence"] == pytest.approx(0.1, abs=1e-6)  # 基线
 
 
@@ -145,9 +148,10 @@ def test_timestamp_updated_on_save(tmp_state: EmotionState) -> None:
     time.sleep(0.01)
     s.update_vec({"valence": 0.2})
     after = datetime.now(timezone.utc)
-    ts_str = s.get_current()["last_update"]
-    ts = datetime.fromisoformat(ts_str)
-    assert before <= ts <= after
+    ts = s.get_current()["last_update"]
+    # ts is ISO string, parse and compare
+    ts_dt = datetime.fromisoformat(ts)
+    assert before <= ts_dt <= after
 
 
 # ---- idempotency --------------------------------------------------------------

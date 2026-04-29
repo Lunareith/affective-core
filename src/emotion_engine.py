@@ -9,11 +9,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from derived import DerivedEmotions
-from safety import SafetyGuard
-from gate import KeywordGate
-from appraiser import Appraiser
-from audit import AuditChain
+from .derived import DerivedEmotions
+from .safety import SafetyGuard
+from .gate import KeywordGate
+from .appraiser import Appraiser
+from .audit import AuditChain
+from .prompt_injector import PromptInjector
+from .persona_manager import PersonaManager
 
 
 # 16 维定义（与 config.json 对齐）
@@ -74,6 +76,11 @@ class AffectiveCore:
         self.audit = AuditChain(str(self.config_path))
         self.derived = DerivedEmotions(str(Path(self.config_path).parent / "rules" / "derived_emotions.yaml"))
         self.safety = SafetyGuard(str(self.config_path))
+        self.prompt_injector = PromptInjector(str(self.config_path))
+        self.persona = PersonaManager(
+            templates_path=str(Path(self.config_path).parent / "persona_templates.json"),
+            active_persona=self.cfg.get("persona", {}).get("active", "calm"),
+        )
 
         # 状态
         self.vec: Dict[str, float] = {}
@@ -151,17 +158,23 @@ class AffectiveCore:
         # 3. 计算派生情绪（供 Agent 参考）
         derived = self._compute_derived()
 
-        # 4. persona_filter 应用人格约束
-        filtered_vec = self._persona_filter(dict(self.vec))
+        # 4. persona_filter 应用人格约束（替换硬编码，使用 PersonaManager）
+        filtered_vec = self.persona.apply_constraints(dict(self.vec))
 
         # 5. 决定当前回复的建议语气
         tone = self._suggest_tone(filtered_vec, derived)
+
+        # 6. Prompt 注入（情绪变化超阈值才写入 EMOTION_STATE.md）
+        inject_result = self.prompt_injector.update(
+            filtered_vec, derived_emotions=derived, tone=tone
+        )
 
         return {
             "emotion_vec": filtered_vec,
             "derived_emotions": derived[:3],
             "suggested_tone": tone,
             "gate_triggered": gate_result["triggered"],
+            "system_prompt_inject": inject_result,
         }
 
     # ------------------------------------------------------------------
@@ -213,13 +226,27 @@ class AffectiveCore:
         # 3.3 表达前向量过滤
         safe_vec = self.safety.filter_vec_for_expression(dict(self.vec))
 
+        # 3.4 人格约束应用（v1.1.0：替换硬编码 _persona_filter）
+        safe_vec = self.persona.apply_constraints(safe_vec)
+
         # 4. 派生情绪（使用 derived.py 模块，M3 修复）
         derived = self.derived.compute(safe_vec)
         self.audit.log("derived", {"derived": derived[:5]})
 
-        # 5. 主动表达计划（传入对话密度，L1 修复）
+        # 5. 主动表达计划（传入对话密度 + 人格参数，v1.1.0）
         density = self._get_conversation_density()
         express_plan = self._expressor_plan(derived, safe_vec, density)
+
+        # 5.1 人格最终否决/改写权（v1.1.0）
+        if express_plan["should_express"]:
+            override = self.persona.should_express_override(
+                express_plan["emotion_label"],
+                express_plan.get("intensity", 0.0),
+                self.last_expressions,
+            )
+            if override and override.get("rewrite_hint") == "suppress":
+                express_plan = {"should_express": False, "emotion_label": None, "reason": override["reason"]}
+
         if express_plan["should_express"]:
             self.last_expressions.append(express_plan["emotion_label"])
             self.last_expressions = self.last_expressions[-10:]
@@ -338,10 +365,12 @@ class AffectiveCore:
     # ------------------------------------------------------------------
     def _expressor_plan(self, derived: List[Dict[str, Any]], vec: Dict[str, float],
                         density: str = "normal") -> Dict[str, Any]:
+        # v1.1.0：优先使用人格模板的表达参数
+        persona_params = self.persona.expression_params()
         exp_cfg = self.cfg.get("expression", {})
-        intensity_threshold = exp_cfg.get("intensity_threshold", 0.6)
-        surface_cd = exp_cfg.get("surface_cooldown_seconds", 60)
-        deep_cd = exp_cfg.get("deep_cooldown_seconds", 180)
+        intensity_threshold = persona_params.get("intensity_threshold", exp_cfg.get("intensity_threshold", 0.6))
+        surface_cd = persona_params.get("surface_cooldown_seconds", exp_cfg.get("surface_cooldown_seconds", 60))
+        deep_cd = persona_params.get("deep_cooldown_seconds", exp_cfg.get("deep_cooldown_seconds", 180))
         novelty_on = exp_cfg.get("novelty_check_enabled", True)
 
         # 获取上次表达时间
@@ -377,18 +406,6 @@ class AffectiveCore:
             return {"should_express": True, "emotion_label": emo["label"], "intensity": emo["intensity"], "density": density}
 
         return {"should_express": False, "emotion_label": None}
-
-    # ------------------------------------------------------------------
-    # persona_filter
-    # ------------------------------------------------------------------
-    def _persona_filter(self, vec: Dict[str, float]) -> Dict[str, float]:
-        """应用人格约束（硬约束）。实际应从 SOUL.md 解析，MVP 简化。"""
-        soul = self.cfg.get("persona", {})
-        if soul.get("calm") and vec.get("arousal", 0.0) > 0.6:
-            vec["arousal"] = 0.6
-        if soul.get("reserved") and vec.get("valence", 0.0) < -0.3:
-            vec["valence"] = -0.3
-        return vec
 
     def _suggest_tone(self, vec: Dict[str, float], derived: List[Dict[str, Any]]) -> str:
         """根据情绪状态建议回复语气。"""

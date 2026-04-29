@@ -7,24 +7,6 @@ import re
 from typing import Dict, List
 
 
-# Local copies to avoid import issues when standalone
-DIMENSIONS = [
-    "valence", "arousal", "dominance",
-    "trust", "intimacy", "respect", "forgiveness",
-    "curiosity", "confusion", "certainty", "anticipation",
-    "nostalgia", "impatience", "relief", "disappointment", "hope",
-]
-
-CLAMP_RANGES = {
-    "valence": [-0.8, 1.0], "arousal": [0.0, 1.0], "dominance": [-1.0, 1.0],
-    "trust": [-1.0, 1.0], "intimacy": [0.0, 1.0], "respect": [0.0, 1.0],
-    "forgiveness": [-0.7, 0.7], "curiosity": [0.0, 1.0], "confusion": [0.0, 1.0],
-    "certainty": [0.0, 1.0], "anticipation": [-1.0, 1.0], "nostalgia": [0.0, 1.0],
-    "impatience": [0.0, 1.0], "relief": [0.0, 1.0], "disappointment": [-0.8, 0.0],
-    "hope": [0.1, 1.0],
-}
-
-
 class SafetyGuard:
     """保障情绪表达的安全边界。"""
 
@@ -36,6 +18,14 @@ class SafetyGuard:
 
     def clamp(self, vec: Dict[str, float]) -> Dict[str, float]:
         """钳制各维度到安全边界。"""
+        try:
+            from .emotion_engine import CLAMP_RANGES, DIMENSIONS
+        except ImportError:
+            try:
+                from emotion_engine import CLAMP_RANGES, DIMENSIONS
+            except ImportError:
+                CLAMP_RANGES = {}
+                DIMENSIONS = list(vec.keys())
         result = dict(vec)
         for dim in DIMENSIONS:
             lo, hi = CLAMP_RANGES.get(dim, [-1.0, 1.0])
