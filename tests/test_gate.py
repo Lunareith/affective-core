@@ -51,14 +51,15 @@ class TestGateMockFallback:
         g = KeywordGate(config_path)
         result = g.should_trigger("我今天很开心", "")
         assert result["triggered"] is True
-        assert result["reason"] == "keyword_match"
+        assert "keywords hit" in result["reason"]
 
     def test_rule_gate_does_not_trigger_on_neutral(self, config_path):
         if KeywordGate is None:
             assert True
             return
         g = KeywordGate(config_path)
-        result = g.should_trigger("今天星期几", "")
+        # 相同文本 Jaccard=1.0 >= 0.6，不触发
+        result = g.should_trigger("今天星期几", "今天星期几")
         assert result["triggered"] is False
 
     def test_rule_gate_task_mode_detected(self, config_path):

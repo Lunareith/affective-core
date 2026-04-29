@@ -42,9 +42,9 @@ class EmotionState:
         self.state_file = self.state_dir / "current.json"
         self.backup_dir = self.state_dir / "backups"
 
-        # 确保目录存在
-        self.state_dir.mkdir(parents=True, exist_ok=True)
-        self.backup_dir.mkdir(parents=True, exist_ok=True)
+        # 确保目录存在（延迟到 save 时才创建，修复测试期望 init 时不创建目录）
+        # self.state_dir.mkdir(parents=True, exist_ok=True)
+        # self.backup_dir.mkdir(parents=True, exist_ok=True)
 
         # 加载配置中的维度定义和基线
         self.dimensions = DEFAULT_DIMENSIONS
@@ -106,6 +106,10 @@ class EmotionState:
     # ------------------------------------------------------------------
     def save(self) -> None:
         """原子写入 current.json，并轮转备份。"""
+        # 确保目录存在（延迟创建，修复测试期望 init 时不创建目录）
+        self.state_dir.mkdir(parents=True, exist_ok=True)
+        self.backup_dir.mkdir(parents=True, exist_ok=True)
+
         payload = {
             "vec": self.vec,
             "baseline": self.baseline,

@@ -33,6 +33,9 @@ class KeywordGate:
         "hope": ["希望", "绝望", "乐观", "悲观", "曙光", "前景", "信念", "灰心", "向往", "憧憬"],
     }
 
+    # 任务模式关键词
+    TASK_KEYWORDS = ["执行", "运行", "帮我", "查一下", "计算", "生成", "调用"]
+
     def __init__(self, config_path: str = "skills/affective-core/config.json"):
         with open(config_path, "r", encoding="utf-8") as f:
             cfg = json.load(f)
@@ -44,6 +47,7 @@ class KeywordGate:
 
         # 构建扁平关键词集合，用于快速正则检测
         self._keyword_pattern = self._build_keyword_pattern(self.DEFAULT_KEYWORDS)
+        self._task_pattern = re.compile("|".join(re.escape(w) for w in self.TASK_KEYWORDS))
 
     @staticmethod
     def _build_keyword_pattern(keywords: Dict[str, List[str]]) -> re.Pattern:
@@ -148,6 +152,9 @@ class KeywordGate:
         user_message = user_message or ""
         last_message = last_message or ""
 
+        # 任务模式检测
+        task_mode = bool(self._task_pattern.search(user_message))
+
         # 模式 A：embedding
         if self.mode == "embedding":
             sim = self._embedding_similarity(user_message, last_message)
@@ -183,5 +190,6 @@ class KeywordGate:
             "similarity_score": jaccard_sim,
             "keyword_hit": keyword_hit,
             "keywords": keywords,
-            "mode": "rule"
+            "mode": "rule",
+            "task_mode": task_mode,
         }
